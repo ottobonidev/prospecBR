@@ -1,0 +1,15 @@
+{
+  "name": "conecta-obras",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @conecta-obras/web dev",
+    "dev:worker": "pnpm --filter @conecta-obras/worker dev",
+    "db:generate": "pnpm --filter @conecta-obras/db generate",
+    "db:push": "pnpm --filter @conecta-obras/db push",
+    "test": "pnpm --filter @conecta-obras/web test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
