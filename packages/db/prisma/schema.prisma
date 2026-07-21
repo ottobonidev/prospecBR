@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Conta {
+  id          String            @id @default(cuid())
+  nomeEmpresa String
+  cnpj        String            @unique
+  plano       String            @default("trial")
+  criadoEm    DateTime          @default(now())
+  usuarios    Usuario[]
+  convites    ConviteVendedor[]
+}
+
+enum Papel {
+  LOJISTA
+  VENDEDOR
+}
+
+enum StatusUsuario {
+  ATIVO
+  INATIVO
+}
+
+model Usuario {
+  id        String        @id @default(cuid())
+  contaId   String
+  conta     Conta         @relation(fields: [contaId], references: [id])
+  nome      String
+  email     String        @unique
+  senhaHash String
+  papel     Papel
+  status    StatusUsuario @default(ATIVO)
+  criadoEm  DateTime      @default(now())
+
+  @@index([contaId])
+}
+
+model ConviteVendedor {
+  id       String    @id @default(cuid())
+  contaId  String
+  conta    Conta     @relation(fields: [contaId], references: [id])
+  email    String
+  token    String    @unique
+  aceitoEm DateTime?
+  expiraEm DateTime
+  criadoEm DateTime  @default(now())
+
+  @@index([contaId])
+}
