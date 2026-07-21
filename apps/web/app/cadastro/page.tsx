@@ -40,7 +40,11 @@ export default function CadastroPage() {
 
     if (!res.ok) {
       const body = await res.json();
-      setErro(body.error === "EMAIL_EM_USO" ? "Email já cadastrado" : "CNPJ já cadastrado");
+      const mensagens: Record<string, string> = {
+        EMAIL_EM_USO: "Email já cadastrado",
+        CNPJ_EM_USO: "CNPJ já cadastrado",
+      };
+      setErro(mensagens[body.error] ?? "Erro ao criar conta");
       return;
     }
 
