@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import type { PrismaClient } from "@conecta-obras/db";
+import type { Prisma, PrismaClient } from "@conecta-obras/db";
 
 export interface CriarContaInput {
   nomeEmpresa: string;
@@ -29,7 +29,7 @@ export async function criarContaComLojista(
 
   const senhaHash = await bcrypt.hash(input.senha, 10);
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const conta = await tx.conta.create({
       data: { nomeEmpresa: input.nomeEmpresa, cnpj: input.cnpj },
     });

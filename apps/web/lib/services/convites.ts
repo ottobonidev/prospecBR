@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import type { PrismaClient } from "@conecta-obras/db";
+import type { Prisma, PrismaClient } from "@conecta-obras/db";
 
 const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -47,7 +47,7 @@ export async function aceitarConvite(prisma: PrismaClient, input: AceitarConvite
 
   const senhaHash = await bcrypt.hash(input.senha, 10);
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const usuario = await tx.usuario.create({
       data: {
         contaId: convite.contaId,
