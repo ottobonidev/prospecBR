@@ -7,7 +7,11 @@ export default async function MeuPainelPage() {
   const ctx = await getSessionContext();
 
   const vendedores = await prisma.usuario.findMany({
-    where: { contaId: ctx.contaId, papel: "VENDEDOR" },
+    where: {
+      contaId: ctx.contaId,
+      papel: "VENDEDOR",
+      ...(ctx.papel === "VENDEDOR" ? { id: ctx.userId } : {}),
+    },
     orderBy: { criadoEm: "desc" },
   });
 
