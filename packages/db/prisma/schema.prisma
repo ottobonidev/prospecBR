@@ -53,3 +53,30 @@ model ConviteVendedor {
 
   @@index([contaId])
 }
+
+enum StatusObra {
+  ATIVA
+  ENCERRADA
+  NULA
+  SUSPENSA
+  PARALISADA
+}
+
+model Obra {
+  id              String     @id @default(cuid())
+  cno             String     @unique
+  cnpjResponsavel String
+  razaoSocial     String
+  uf              String
+  cidade          String
+  bairro          String?
+  cep             String?
+  status          StatusObra
+  dataInicio      DateTime?
+  natureza        String?
+  areaConstruida  Float?
+  criadoEm        DateTime   @default(now())
+  atualizadoEm    DateTime   @updatedAt
+
+  @@index([uf, cidade, status])
+}
