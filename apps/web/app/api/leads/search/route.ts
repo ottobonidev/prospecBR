@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma, type StatusObra } from "@conecta-obras/db";
+import { prisma, StatusObra } from "@conecta-obras/db";
 import { getSessionContext, UnauthorizedError } from "@/lib/session";
 import { buscarObras } from "@/lib/services/leads";
 import { registrarConsumoLeadsSearch } from "@/lib/services/creditos";
@@ -8,7 +8,7 @@ import { registrarConsumoLeadsSearch } from "@/lib/services/creditos";
 const querySchema = z.object({
   uf: z.array(z.string()).optional(),
   cidade: z.string().optional(),
-  status: z.array(z.string()).optional(),
+  status: z.array(z.nativeEnum(StatusObra)).optional(),
   palavraChave: z.string().optional(),
   page: z.coerce.number().int().min(1).optional(),
 });
@@ -29,15 +29,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "DADOS_INVALIDOS" }, { status: 400 });
     }
 
+    const resultado = await buscarObras(prisma, parsed.data);
+
     const { excedente } = await registrarConsumoLeadsSearch(prisma, {
       contaId: ctx.contaId,
       usuarioId: ctx.userId,
       tipo: "LEADS_SEARCH",
-    });
-
-    const resultado = await buscarObras(prisma, {
-      ...parsed.data,
-      status: parsed.data.status as StatusObra[] | undefined,
     });
 
     return NextResponse.json({ ...resultado, excedente });
