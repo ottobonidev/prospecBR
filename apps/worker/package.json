@@ -8,6 +8,8 @@
     "build": "tsc"
   },
   "dependencies": {
+    "@conecta-obras/db": "workspace:*",
+    "@google-cloud/bigquery": "^7.9.0",
     "bullmq": "^5.13.0",
     "ioredis": "^5.4.0"
   },
