@@ -112,4 +112,28 @@ describe("buscarObras", () => {
     const args = prisma.obra.findMany.mock.calls[0][0];
     expect(args.where.ocultas).toEqual({ none: { usuarioId: "user_1" } });
   });
+
+  it("combines metragemFaixa with zona and dataInicio range in the same where", async () => {
+    const prisma = mockPrisma([], 0);
+
+    await buscarObras(prisma, {
+      metragemFaixa: "500_A_750",
+      zona: ["URBANA"],
+      dataInicioDe: new Date("2026-01-01T00:00:00.000Z"),
+    });
+
+    const args = prisma.obra.findMany.mock.calls[0][0];
+    expect(args.where.areaConstruida).toEqual({ gte: 500, lte: 750 });
+    expect(args.where.zona).toEqual({ in: ["URBANA"] });
+    expect(args.where.dataInicio).toEqual({ gte: new Date("2026-01-01T00:00:00.000Z") });
+  });
+
+  it("throws for a metragemFaixa value that isn't a known bracket", async () => {
+    const prisma = mockPrisma([], 0);
+
+    await expect(
+      buscarObras(prisma, { metragemFaixa: "FAIXA_INEXISTENTE" as any })
+    ).rejects.toThrow("METRAGEM_FAIXA_INVALIDA");
+    expect(prisma.obra.findMany).not.toHaveBeenCalled();
+  });
 });

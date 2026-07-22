@@ -39,6 +39,8 @@ export interface BuscarObrasInput {
   metragemFaixa?: FaixaMetragem;
   dataInicioDe?: Date;
   dataInicioAte?: Date;
+  // Identidade de quem busca, não um filtro de domínio — usado só pra excluir obras que esse
+  // usuário ocultou. Vem do caller (rota), nunca do input do usuário final.
   usuarioIdParaExcluirOcultas?: string;
   page?: number;
   pageSize?: number;
@@ -58,6 +60,10 @@ export async function buscarObras(
 ): Promise<BuscarObrasResultado> {
   const page = input.page ?? 1;
   const pageSize = input.pageSize ?? 10;
+
+  if (input.metragemFaixa && !(input.metragemFaixa in FAIXAS_METRAGEM)) {
+    throw new Error("METRAGEM_FAIXA_INVALIDA");
+  }
 
   const where = {
     ...(input.uf && input.uf.length > 0 ? { uf: { in: input.uf } } : {}),
