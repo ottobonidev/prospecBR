@@ -1,6 +1,10 @@
 import bcrypt from "bcryptjs";
 import type { Prisma, PrismaClient } from "@conecta-obras/db";
 
+const COTA_MENSAL_GRATIS_PADRAO = 50;
+const PRECO_CUSTO_LEADS_CENTAVOS_PADRAO = 20;
+const PRECO_VENDA_LEADS_CENTAVOS_PADRAO = 40;
+
 export interface CriarContaInput {
   nomeEmpresa: string;
   cnpj: string;
@@ -40,6 +44,14 @@ export async function criarContaComLojista(
         email: input.email,
         senhaHash,
         papel: "LOJISTA",
+      },
+    });
+    await tx.creditPlan.create({
+      data: {
+        contaId: conta.id,
+        cotaMensalGratis: COTA_MENSAL_GRATIS_PADRAO,
+        precoCustoLeadsCentavos: PRECO_CUSTO_LEADS_CENTAVOS_PADRAO,
+        precoVendaLeadsCentavos: PRECO_VENDA_LEADS_CENTAVOS_PADRAO,
       },
     });
     return { conta, usuario };

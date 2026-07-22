@@ -6,6 +6,7 @@ function mockPrisma() {
   const usuario = { id: "user_1", contaId: "conta_1", papel: "LOJISTA" };
   const txContaCreate = vi.fn().mockResolvedValue(conta);
   const txUsuarioCreate = vi.fn().mockResolvedValue(usuario);
+  const txCreditPlanCreate = vi.fn().mockResolvedValue({ id: "plan_1", contaId: "conta_1" });
   const prisma = {
     conta: { findUnique: vi.fn().mockResolvedValue(null) },
     usuario: { findUnique: vi.fn().mockResolvedValue(null) },
@@ -13,15 +14,16 @@ function mockPrisma() {
       fn({
         conta: { create: txContaCreate },
         usuario: { create: txUsuarioCreate },
+        creditPlan: { create: txCreditPlanCreate },
       })
     ),
   } as any;
-  return { prisma, txContaCreate, txUsuarioCreate };
+  return { prisma, txContaCreate, txUsuarioCreate, txCreditPlanCreate };
 }
 
 describe("criarContaComLojista", () => {
-  it("creates Conta and Usuario(LOJISTA) in a transaction", async () => {
-    const { prisma, txContaCreate, txUsuarioCreate } = mockPrisma();
+  it("creates Conta, Usuario(LOJISTA) and a default CreditPlan in a transaction", async () => {
+    const { prisma, txContaCreate, txUsuarioCreate, txCreditPlanCreate } = mockPrisma();
 
     const result = await criarContaComLojista(prisma, {
       nomeEmpresa: "Loja X",
@@ -50,6 +52,11 @@ describe("criarContaComLojista", () => {
     expect(typeof usuarioCreateArgs.data.senhaHash).toBe("string");
     expect(usuarioCreateArgs.data.senhaHash.length).toBeGreaterThan(0);
     expect(usuarioCreateArgs.data.senhaHash).not.toBe("senha-forte-123");
+
+    expect(txCreditPlanCreate).toHaveBeenCalledOnce();
+    const creditPlanArgs = txCreditPlanCreate.mock.calls[0][0];
+    expect(creditPlanArgs.data.contaId).toBe("conta_1");
+    expect(creditPlanArgs.data.cotaMensalGratis).toBeGreaterThan(0);
   });
 
   it("throws if email is already in use", async () => {
