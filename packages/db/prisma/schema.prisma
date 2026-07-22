@@ -15,6 +15,11 @@ model Conta {
   criadoEm    DateTime          @default(now())
   usuarios    Usuario[]
   convites    ConviteVendedor[]
+
+  creditPlan          CreditPlan?
+  creditAllocations   CreditAllocation[]
+  creditLedgerEntries CreditLedgerEntry[]
+  faturas             FaturaMensal[]
 }
 
 enum Papel {
@@ -37,6 +42,9 @@ model Usuario {
   papel     Papel
   status    StatusUsuario @default(ATIVO)
   criadoEm  DateTime      @default(now())
+
+  creditAllocations   CreditAllocation[]
+  creditLedgerEntries CreditLedgerEntry[]
 
   @@index([contaId])
 }
@@ -79,4 +87,68 @@ model Obra {
   atualizadoEm    DateTime   @updatedAt
 
   @@index([uf, cidade, status])
+}
+
+model CreditPlan {
+  id                      String   @id @default(cuid())
+  contaId                 String   @unique
+  conta                   Conta    @relation(fields: [contaId], references: [id])
+  cotaMensalGratis        Int
+  precoCustoLeadsCentavos Int
+  precoVendaLeadsCentavos Int
+  criadoEm                DateTime @default(now())
+}
+
+model CreditAllocation {
+  id           String   @id @default(cuid())
+  contaId      String
+  conta        Conta    @relation(fields: [contaId], references: [id])
+  usuarioId    String
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id])
+  cotaAlocada  Int
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([contaId, usuarioId])
+}
+
+enum TipoConsumoCredito {
+  LEADS_SEARCH
+}
+
+model CreditLedgerEntry {
+  id            String             @id @default(cuid())
+  contaId       String
+  conta         Conta              @relation(fields: [contaId], references: [id])
+  usuarioId     String
+  usuario       Usuario            @relation(fields: [usuarioId], references: [id])
+  tipo          TipoConsumoCredito
+  excedente     Boolean
+  mesReferencia String
+  criadoEm      DateTime           @default(now())
+
+  @@index([contaId, mesReferencia])
+}
+
+enum StatusFatura {
+  PENDENTE
+  PAGA
+}
+
+model FaturaMensal {
+  id                  String       @id @default(cuid())
+  contaId             String
+  conta               Conta        @relation(fields: [contaId], references: [id])
+  mesReferencia       String
+  quantidadeExcedente Int
+  valorTotalCentavos  Int
+  status              StatusFatura @default(PENDENTE)
+  criadoEm            DateTime     @default(now())
+
+  @@unique([contaId, mesReferencia])
+}
+
+model ObrasSyncCursor {
+  id                  String   @id @default("obras_sync_cursor")
+  ultimaSincronizacao DateTime
+  atualizadoEm        DateTime @updatedAt
 }
