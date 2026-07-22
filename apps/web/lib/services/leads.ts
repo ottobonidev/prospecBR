@@ -1,21 +1,22 @@
-import type { PrismaClient } from "@conecta-obras/db";
+import type { Obra, PrismaClient, StatusObra } from "@conecta-obras/db";
 
 export interface BuscarObrasInput {
   uf?: string[];
   cidade?: string;
-  status?: string[];
+  status?: StatusObra[];
   palavraChave?: string;
   page?: number;
   pageSize?: number;
 }
 
 export interface BuscarObrasResultado {
-  items: unknown[];
+  items: Obra[];
   total: number;
   page: number;
   pageSize: number;
 }
 
+// No tenant/auth scoping here: Obra is shared reference data, not tenant-owned; quota/tenant enforcement belongs to the caller.
 export async function buscarObras(
   prisma: PrismaClient,
   input: BuscarObrasInput
@@ -26,7 +27,7 @@ export async function buscarObras(
   const where = {
     ...(input.uf && input.uf.length > 0 ? { uf: { in: input.uf } } : {}),
     ...(input.cidade ? { cidade: input.cidade } : {}),
-    ...(input.status && input.status.length > 0 ? { status: { in: input.status as any } } : {}),
+    ...(input.status && input.status.length > 0 ? { status: { in: input.status } } : {}),
     ...(input.palavraChave
       ? { razaoSocial: { contains: input.palavraChave, mode: "insensitive" as const } }
       : {}),
