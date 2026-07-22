@@ -16,6 +16,20 @@ export interface ObraFonte {
 }
 
 export interface ObrasFonteClient {
+  /**
+   * Busca obras atualizadas na fonte a partir do cursor informado.
+   *
+   * Contrato (obrigatório para qualquer implementação):
+   * - Os resultados PODEM ser truncados pela implementação (ex.: LIMIT na query).
+   * - Quando truncados, as linhas retornadas DEVEM ser as de menor
+   *   `atualizadoEmFonte` igual ou posterior ao cursor (ordenação ascendente
+   *   ANTES de aplicar qualquer limite) — caso contrário, o cursor baseado no
+   *   máximo retornado pelo chamador pularia silenciosamente linhas ainda não
+   *   buscadas.
+   * - O limite do cursor é INCLUSIVO (`>=`): linhas exatamente no cursor podem
+   *   ser retornadas de novo. Os chamadores dependem de upserts idempotentes
+   *   para absorver essas repetições de fronteira.
+   */
   buscarAtualizadasDesde(cursor: Date): Promise<ObraFonte[]>;
 }
 
