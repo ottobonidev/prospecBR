@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BigQuery } from "@google-cloud/bigquery";
 import { BaseDosDadosObrasClient } from "../basedosdados-client";
 
@@ -24,6 +24,10 @@ const linhaCompleta = {
 };
 
 describe("BaseDosDadosObrasClient", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("mapeia uma linha completa para ObraFonte, normalizando status", async () => {
     const bigquery = criarMockBigQuery([
       linhaCompleta,
@@ -94,6 +98,112 @@ describe("BaseDosDadosObrasClient", () => {
     expect(query).toContain("data_atualizacao >= @cursor");
     expect(query).toContain("ORDER BY data_atualizacao ASC, cno ASC");
     expect(query).toContain("LIMIT 5000");
-    expect(params).toEqual({ cursor: cursor.toISOString() });
+    // Date direto -> param TIMESTAMP (string ISO viraria param STRING e
+    // quebraria a comparacao contra coluna TIMESTAMP).
+    expect(params).toEqual({ cursor });
+    expect(params.cursor).toBeInstanceOf(Date);
+  });
+
+  it("desembrulha objetos de data do BigQuery ({ value }) em Dates validos", async () => {
+    const bigquery = criarMockBigQuery([
+      {
+        ...linhaCompleta,
+        dataInicio: { value: "2024-01-15" },
+        atualizadoEmFonte: { value: "2026-07-01T00:00:00.000Z" },
+      },
+    ]);
+    const client = new BaseDosDadosObrasClient(bigquery);
+
+    const [obra] = await client.buscarAtualizadasDesde(new Date("2025-05-01"));
+
+    expect(obra.dataInicio).toEqual(new Date("2024-01-15"));
+    expect(obra.atualizadoEmFonte).toEqual(new Date("2026-07-01T00:00:00.000Z"));
+  });
+
+  it("rejeita quando atualizadoEmFonte nao pode ser parseado", async () => {
+    const bigquery = criarMockBigQuery([
+      { ...linhaCompleta, atualizadoEmFonte: { foo: "bar" } },
+    ]);
+    const client = new BaseDosDadosObrasClient(bigquery);
+
+    await expect(
+      client.buscarAtualizadasDesde(new Date("2025-05-01")),
+    ).rejects.toThrow(/ATUALIZADO_EM_FONTE_INVALIDO/);
+  });
+
+  it("rejeita quando atualizadoEmFonte e uma string lixo", async () => {
+    const bigquery = criarMockBigQuery([
+      { ...linhaCompleta, atualizadoEmFonte: "nao-e-data" },
+    ]);
+    const client = new BaseDosDadosObrasClient(bigquery);
+
+    await expect(
+      client.buscarAtualizadasDesde(new Date("2025-05-01")),
+    ).rejects.toThrow(/ATUALIZADO_EM_FONTE_INVALIDO/);
+  });
+
+  it("mapeia dataInicio invalido para null (campo nao critico)", async () => {
+    const bigquery = criarMockBigQuery([
+      { ...linhaCompleta, dataInicio: { foo: "bar" } },
+    ]);
+    const client = new BaseDosDadosObrasClient(bigquery);
+
+    const [obra] = await client.buscarAtualizadasDesde(new Date("2025-05-01"));
+
+    expect(obra.dataInicio).toBeNull();
+  });
+
+  it("normaliza variantes de status por familia/substring", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const bigquery = criarMockBigQuery([
+      { ...linhaCompleta, cno: "1", status: "07 - Encerrada" },
+      { ...linhaCompleta, cno: "2", status: "Obra Suspensa" },
+      { ...linhaCompleta, cno: "3", status: "02 - Paralisada" },
+      { ...linhaCompleta, cno: "4", status: "Inscricao Nula" },
+    ]);
+    const client = new BaseDosDadosObrasClient(bigquery);
+
+    const obras = await client.buscarAtualizadasDesde(new Date("2025-05-01"));
+
+    expect(obras.map((o) => o.status)).toEqual([
+      "ENCERRADA",
+      "SUSPENSA",
+      "PARALISADA",
+      "NULA",
+    ]);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("INATIVA nao vira ATIVA via familia — cai no fallback com warn", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const bigquery = criarMockBigQuery([
+      { ...linhaCompleta, status: "INATIVA" },
+    ]);
+    const client = new BaseDosDadosObrasClient(bigquery);
+
+    const [obra] = await client.buscarAtualizadasDesde(new Date("2025-05-01"));
+
+    // Nao e um dos cinco valores canonicos: fica no fallback ATIVA, mas com
+    // warn diagnostico contendo o valor bruto.
+    expect(obra.status).toBe("ATIVA");
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("status desconhecido"),
+    );
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("INATIVA"));
+  });
+
+  it("status totalmente desconhecido gera warn e cai em ATIVA", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const bigquery = criarMockBigQuery([
+      { ...linhaCompleta, status: "desconhecido" },
+    ]);
+    const client = new BaseDosDadosObrasClient(bigquery);
+
+    const [obra] = await client.buscarAtualizadasDesde(new Date("2025-05-01"));
+
+    expect(obra.status).toBe("ATIVA");
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("desconhecido"),
+    );
   });
 });

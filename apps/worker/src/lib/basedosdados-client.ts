@@ -3,6 +3,9 @@ import type { ObraFonte, ObrasFonteClient } from "../services/obras-sync";
 
 // Nomes de tabela/colunas são os melhores defaults conhecidos — confirmar
 // contra o schema real do dataset em basedosdados.org antes de uso em produção.
+// Assumimos que data_atualizacao é TIMESTAMP (o param `cursor` é passado como
+// Date, que a lib mapeia para TIMESTAMP). Se a coluna real for DATE, a
+// comparação precisa virar `data_atualizacao >= DATE(@cursor)` no SQL.
 const TABELA_CNO =
   process.env.BASEDOSDADOS_CNO_TABLE ?? "basedosdados.br_rf_cno.microdados_obras";
 
@@ -16,9 +19,36 @@ const STATUS_VALIDOS: ObraFonte["status"][] = [
 
 function normalizarStatus(valor: string): ObraFonte["status"] {
   const normalizado = valor.trim().toUpperCase();
-  return (STATUS_VALIDOS as string[]).includes(normalizado)
-    ? (normalizado as ObraFonte["status"])
-    : "ATIVA";
+  // 1) Match exato contra os valores canonicos.
+  if ((STATUS_VALIDOS as string[]).includes(normalizado)) {
+    return normalizado as ObraFonte["status"];
+  }
+  // 2) Match por familia/substring, para variantes como "07 - Encerrada".
+  //    Ordem importa: familias mais especificas primeiro; "ATIVA" por ultimo,
+  //    com guarda contra "INATIVA" (que contem "ATIVA" como substring).
+  if (normalizado.includes("ENCERRA")) return "ENCERRADA";
+  if (normalizado.includes("NULA")) return "NULA";
+  if (normalizado.includes("SUSPEN")) return "SUSPENSA";
+  if (normalizado.includes("PARALISA")) return "PARALISADA";
+  if (normalizado.includes("ATIVA") && !normalizado.includes("INATIV")) {
+    return "ATIVA";
+  }
+  // 3) Fallback diagnostico: loga o valor bruto para que a primeira execucao
+  //    contra o dataset real revele status nao mapeados.
+  console.warn(`[basedosdados-client] status desconhecido: ${JSON.stringify(valor)}`);
+  return "ATIVA";
+}
+
+// BigQuery retorna colunas DATE/TIMESTAMP como instancias BigQueryDate /
+// BigQueryTimestamp, que nao tem toString() customizado — String() nelas
+// produz "[object Object]" e new Date() vira Invalid Date. Desembrulha a
+// propriedade `.value` quando presente.
+function paraDate(valor: unknown): Date {
+  const bruto =
+    typeof valor === "object" && valor !== null && "value" in valor
+      ? String((valor as { value: unknown }).value)
+      : String(valor);
+  return new Date(bruto);
 }
 
 export class BaseDosDadosObrasClient implements ObrasFonteClient {
@@ -58,22 +88,39 @@ export class BaseDosDadosObrasClient implements ObrasFonteClient {
 
     const [rows] = await this.bigquery.query({
       query,
-      params: { cursor: cursor.toISOString() },
+      // Date -> param TIMESTAMP. Uma string ISO viraria param STRING, e o
+      // BigQuery não coage STRING em comparações contra TIMESTAMP/DATE
+      // ("No matching signature").
+      params: { cursor },
     });
 
-    return rows.map((row: Record<string, unknown>) => ({
-      cno: String(row.cno),
-      cnpjResponsavel: String(row.cnpjResponsavel),
-      razaoSocial: String(row.razaoSocial),
-      uf: String(row.uf),
-      cidade: String(row.cidade),
-      bairro: row.bairro ? String(row.bairro) : null,
-      cep: row.cep ? String(row.cep) : null,
-      status: normalizarStatus(String(row.status)),
-      dataInicio: row.dataInicio ? new Date(String(row.dataInicio)) : null,
-      natureza: row.natureza ? String(row.natureza) : null,
-      areaConstruida: row.areaConstruida ? Number(row.areaConstruida) : null,
-      atualizadoEmFonte: new Date(String(row.atualizadoEmFonte)),
-    }));
+    return rows.map((row: Record<string, unknown>) => {
+      const atualizadoEmFonte = paraDate(row.atualizadoEmFonte);
+      if (Number.isNaN(atualizadoEmFonte.getTime())) {
+        // Timestamp do cursor corrompido precisa falhar alto: um Invalid Date
+        // silencioso congelaria o cursor de sincronização para sempre.
+        throw new Error(
+          `ATUALIZADO_EM_FONTE_INVALIDO: ${JSON.stringify(row.atualizadoEmFonte)}`,
+        );
+      }
+
+      const dataInicio = row.dataInicio ? paraDate(row.dataInicio) : null;
+
+      return {
+        cno: String(row.cno),
+        cnpjResponsavel: String(row.cnpjResponsavel),
+        razaoSocial: String(row.razaoSocial),
+        uf: String(row.uf),
+        cidade: String(row.cidade),
+        bairro: row.bairro ? String(row.bairro) : null,
+        cep: row.cep ? String(row.cep) : null,
+        status: normalizarStatus(String(row.status)),
+        dataInicio:
+          dataInicio && !Number.isNaN(dataInicio.getTime()) ? dataInicio : null,
+        natureza: row.natureza ? String(row.natureza) : null,
+        areaConstruida: row.areaConstruida ? Number(row.areaConstruida) : null,
+        atualizadoEmFonte,
+      };
+    });
   }
 }
