@@ -27,6 +27,7 @@ export function LeadsSearchForm({ restanteInicial }: { restanteInicial: number }
   const [restante, setRestante] = useState(restanteInicial);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [excedente, setExcedente] = useState(false);
 
   async function pesquisar(e: React.FormEvent) {
     e.preventDefault();
@@ -44,18 +45,26 @@ export function LeadsSearchForm({ restanteInicial }: { restanteInicial: number }
     if (cidade.trim()) params.set("cidade", cidade.trim());
     if (palavraChave.trim()) params.set("palavraChave", palavraChave.trim());
 
-    const res = await fetch(`/api/leads/search?${params.toString()}`);
-    setCarregando(false);
-
-    if (!res.ok) {
+    try {
+      const res = await fetch(`/api/leads/search?${params.toString()}`);
+      if (!res.ok) {
+        setErro("Não foi possível buscar obras agora.");
+        setObras([]);
+        setTotal(null);
+        return;
+      }
+      const body = await res.json();
+      setObras(body.items);
+      setTotal(body.total);
+      setExcedente(Boolean(body.excedente));
+      setRestante((atual) => (body.excedente ? atual : Math.max(0, atual - 1)));
+    } catch {
       setErro("Não foi possível buscar obras agora.");
-      return;
+      setObras([]);
+      setTotal(null);
+    } finally {
+      setCarregando(false);
     }
-
-    const body = await res.json();
-    setObras(body.items);
-    setTotal(body.total);
-    setRestante((atual) => (body.excedente ? Math.max(0, atual) : Math.max(0, atual - 1)));
   }
 
   function exportarCsv() {
@@ -103,13 +112,26 @@ export function LeadsSearchForm({ restanteInicial }: { restanteInicial: number }
         )}
       </form>
 
-      <p className="text-sm text-slate-600">Buscas grátis restantes este mês: {restante}</p>
+      <p className="text-sm text-slate-600">
+        Buscas grátis restantes este mês: {restante}
+        {excedente && (
+          <span className="ml-2 text-amber-700">
+            Franquia esgotada — buscas adicionais são cobradas como excedente.
+          </span>
+        )}
+      </p>
 
-      {erro && <p className="text-sm text-red-600">{erro}</p>}
+      {erro && (
+        <p role="alert" className="text-sm text-red-600">
+          {erro}
+        </p>
+      )}
 
       {total !== null && (
         <div className="space-y-2">
-          <p className="text-sm text-slate-500">{total} obra(s) encontrada(s)</p>
+          <p aria-live="polite" className="text-sm text-slate-500">
+            {total} obra(s) encontrada(s)
+          </p>
           <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
             {obras.map((obra) => (
               <li key={obra.id} className="flex items-center justify-between p-4 text-sm">
