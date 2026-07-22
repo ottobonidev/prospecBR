@@ -20,7 +20,6 @@ model Conta {
   creditAllocations   CreditAllocation[]
   creditLedgerEntries CreditLedgerEntry[]
   faturas             FaturaMensal[]
-  obraFavoritos       ObraFavorito[]
 }
 
 enum Papel {
@@ -160,8 +159,6 @@ model Obra {
 
 model ObraFavorito {
   id        String   @id @default(cuid())
-  contaId   String
-  conta     Conta    @relation(fields: [contaId], references: [id])
   usuarioId String
   usuario   Usuario  @relation(fields: [usuarioId], references: [id])
   obraId    String
