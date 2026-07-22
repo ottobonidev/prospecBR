@@ -20,6 +20,7 @@ model Conta {
   creditAllocations   CreditAllocation[]
   creditLedgerEntries CreditLedgerEntry[]
   faturas             FaturaMensal[]
+  obraFavoritos       ObraFavorito[]
 }
 
 enum Papel {
@@ -45,6 +46,8 @@ model Usuario {
 
   creditAllocations   CreditAllocation[]
   creditLedgerEntries CreditLedgerEntry[]
+  obraFavoritos       ObraFavorito[]
+  obraOcultas         ObraOculta[]
 
   @@index([contaId])
 }
@@ -70,6 +73,50 @@ enum StatusObra {
   PARALISADA
 }
 
+enum CategoriaObra {
+  OBRA_CONSTRUCAO_CIVIL
+  OBRA_ELETRICA_INFRA
+}
+
+enum SubcategoriaObra {
+  OBRA_NOVA
+  ACRESCIMO
+  REFORMA
+  DEMOLICAO
+  EXISTENTE
+}
+
+enum TipoObra {
+  ALVENARIA
+  MISTA
+  MADEIRA
+}
+
+enum TipoArea {
+  PRINCIPAL
+  COMPLEMENTAR
+}
+
+enum Zona {
+  RURAL
+  URBANA
+}
+
+enum DestinacaoObra {
+  RESIDENCIAL_UNIFAMILIAR
+  RESIDENCIAL_MULTIFAMILIAR
+  COMERCIAL_SALAS_LOJAS
+  EDIFICIO_GARAGENS
+  GALPAO_INDUSTRIAL
+  CASA_POPULAR
+  CONJUNTO_HABITACIONAL_POPULAR
+}
+
+enum TipoResponsavel {
+  PESSOA_FISICA
+  PESSOA_JURIDICA
+}
+
 model Obra {
   id              String     @id @default(cuid())
   cno             String     @unique
@@ -86,7 +133,53 @@ model Obra {
   criadoEm        DateTime   @default(now())
   atualizadoEm    DateTime   @updatedAt
 
+  responsavelNome           String?
+  categoria                 CategoriaObra    @default(OBRA_CONSTRUCAO_CIVIL)
+  subcategoria              SubcategoriaObra?
+  tipoObra                  TipoObra?
+  tipoArea                  TipoArea?
+  zona                      Zona?
+  destinacao                DestinacaoObra?
+  tipoResponsavel           TipoResponsavel?
+  areaTotal                 Float?
+  enderecoCompleto          String?
+  complemento               String?
+  valorInvestimentoCentavos Int?
+  previsaoTermino           DateTime?
+
+  favoritos ObraFavorito[]
+  ocultas   ObraOculta[]
+
   @@index([uf, cidade, status])
+  @@index([subcategoria])
+  @@index([tipoObra])
+  @@index([zona])
+  @@index([destinacao])
+  @@index([tipoResponsavel])
+}
+
+model ObraFavorito {
+  id        String   @id @default(cuid())
+  contaId   String
+  conta     Conta    @relation(fields: [contaId], references: [id])
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  obraId    String
+  obra      Obra     @relation(fields: [obraId], references: [id])
+  criadoEm  DateTime @default(now())
+
+  @@unique([usuarioId, obraId])
+}
+
+model ObraOculta {
+  id        String   @id @default(cuid())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  obraId    String
+  obra      Obra     @relation(fields: [obraId], references: [id])
+  criadoEm  DateTime @default(now())
+
+  @@unique([usuarioId, obraId])
 }
 
 model CreditPlan {
