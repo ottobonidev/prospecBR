@@ -28,7 +28,14 @@ export async function registrarConsumoLeadsSearch(
       throw new Error("USUARIO_NAO_PERTENCE_A_CONTA");
     }
 
-    const plano = await tx.creditPlan.findUnique({ where: { contaId: input.contaId } });
+    // Lock the tenant's CreditPlan row for the duration of the transaction so that
+    // concurrent registrarConsumoLeadsSearch calls for the SAME tenant are serialized.
+    // Postgres READ COMMITTED does not otherwise prevent two concurrent transactions
+    // from both reading the same consumidoNoMes count and both writing excedente=false.
+    const planos = await tx.$queryRaw<{ id: string; cotaMensalGratis: number }[]>`
+      SELECT id, "cotaMensalGratis" FROM "CreditPlan" WHERE "contaId" = ${input.contaId} FOR UPDATE
+    `;
+    const plano = planos[0];
     if (!plano) {
       throw new Error("PLANO_DE_CREDITO_NAO_ENCONTRADO");
     }

@@ -14,29 +14,29 @@ describe("mesReferenciaAtual", () => {
 });
 
 function mockPrismaConsumo(
-  plano: any,
+  plano: { id: string; cotaMensalGratis: number } | null,
   consumidoNoMes: number,
   usuario: any = { id: "user_1", contaId: "conta_1" }
 ) {
   const ledgerCreate = vi.fn().mockResolvedValue({ id: "entry_1" });
   const ledgerCount = vi.fn().mockResolvedValue(consumidoNoMes);
-  const planoFindUnique = vi.fn().mockResolvedValue(plano);
+  const queryRaw = vi.fn().mockResolvedValue(plano ? [plano] : []);
   const usuarioFindUnique = vi.fn().mockResolvedValue(usuario);
   const prisma = {
     $transaction: vi.fn().mockImplementation(async (fn: any) =>
       fn({
-        creditPlan: { findUnique: planoFindUnique },
+        $queryRaw: queryRaw,
         creditLedgerEntry: { count: ledgerCount, create: ledgerCreate },
         usuario: { findUnique: usuarioFindUnique },
       })
     ),
   } as any;
-  return { prisma, ledgerCreate, ledgerCount, planoFindUnique, usuarioFindUnique };
+  return { prisma, ledgerCreate, ledgerCount, queryRaw, usuarioFindUnique };
 }
 
 describe("registrarConsumoLeadsSearch", () => {
   it("marks the search as free when under the monthly quota", async () => {
-    const { prisma, ledgerCreate } = mockPrismaConsumo({ cotaMensalGratis: 50 }, 10);
+    const { prisma, ledgerCreate } = mockPrismaConsumo({ id: "plan_1", cotaMensalGratis: 50 }, 10);
 
     const resultado = await registrarConsumoLeadsSearch(prisma, {
       contaId: "conta_1",
@@ -49,8 +49,20 @@ describe("registrarConsumoLeadsSearch", () => {
     expect(ledgerCreate.mock.calls[0][0].data.excedente).toBe(false);
   });
 
+  it("locks the tenant's CreditPlan row via a raw FOR UPDATE query before reading consumption", async () => {
+    const { prisma, queryRaw } = mockPrismaConsumo({ id: "plan_1", cotaMensalGratis: 50 }, 10);
+
+    await registrarConsumoLeadsSearch(prisma, {
+      contaId: "conta_1",
+      usuarioId: "user_1",
+      tipo: "LEADS_SEARCH",
+    });
+
+    expect(queryRaw).toHaveBeenCalledOnce();
+  });
+
   it("marks the search as excedente once the monthly quota is reached", async () => {
-    const { prisma, ledgerCreate } = mockPrismaConsumo({ cotaMensalGratis: 50 }, 50);
+    const { prisma, ledgerCreate } = mockPrismaConsumo({ id: "plan_1", cotaMensalGratis: 50 }, 50);
 
     const resultado = await registrarConsumoLeadsSearch(prisma, {
       contaId: "conta_1",
@@ -63,7 +75,7 @@ describe("registrarConsumoLeadsSearch", () => {
   });
 
   it("marks the last free search (quota - 1 already consumed) as free", async () => {
-    const { prisma } = mockPrismaConsumo({ cotaMensalGratis: 50 }, 49);
+    const { prisma } = mockPrismaConsumo({ id: "plan_1", cotaMensalGratis: 50 }, 49);
 
     const resultado = await registrarConsumoLeadsSearch(prisma, {
       contaId: "conta_1",
@@ -87,7 +99,7 @@ describe("registrarConsumoLeadsSearch", () => {
   });
 
   it("throws if the usuario does not belong to the conta, without writing to the ledger", async () => {
-    const { prisma, ledgerCreate } = mockPrismaConsumo({ cotaMensalGratis: 50 }, 10, {
+    const { prisma, ledgerCreate } = mockPrismaConsumo({ id: "plan_1", cotaMensalGratis: 50 }, 10, {
       id: "user_1",
       contaId: "conta_OUTRA",
     });
@@ -107,7 +119,7 @@ describe("registrarConsumoLeadsSearch", () => {
 describe("obterResumoCreditosMes", () => {
   it("returns quota, consumed and remaining for the current month", async () => {
     const prisma = {
-      creditPlan: { findUnique: vi.fn().mockResolvedValue({ cotaMensalGratis: 50 }) },
+      creditPlan: { findUnique: vi.fn().mockResolvedValue({ id: "plan_1", cotaMensalGratis: 50 }) },
       creditLedgerEntry: { count: vi.fn().mockResolvedValue(12) },
     } as any;
 
@@ -118,7 +130,7 @@ describe("obterResumoCreditosMes", () => {
 
   it("clamps restante at 0 when consumption exceeds quota", async () => {
     const prisma = {
-      creditPlan: { findUnique: vi.fn().mockResolvedValue({ cotaMensalGratis: 50 }) },
+      creditPlan: { findUnique: vi.fn().mockResolvedValue({ id: "plan_1", cotaMensalGratis: 50 }) },
       creditLedgerEntry: { count: vi.fn().mockResolvedValue(70) },
     } as any;
 
