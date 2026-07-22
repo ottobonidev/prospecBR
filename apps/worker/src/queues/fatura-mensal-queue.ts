@@ -13,7 +13,9 @@ export async function agendarFechamentoMensal() {
     "fechamento-mensal",
     {},
     {
-      repeat: { pattern: "0 4 1 * *" },
+      // tz UTC: mesReferenciaAnterior() calcula em UTC — sem isso, um host
+      // UTC-positivo dispararia às 04:00 locais do dia 1 ainda no mês anterior em UTC.
+      repeat: { pattern: "0 4 1 * *", tz: "UTC" },
       jobId: "fatura-mensal-fechamento",
       attempts: 3,
       backoff: { type: "exponential", delay: 60_000 },

@@ -15,7 +15,7 @@ export async function agendarSincronizacaoDiaria() {
     "sync-diario",
     {},
     {
-      repeat: { pattern: "0 3 * * *" },
+      repeat: { pattern: "0 3 * * *", tz: "UTC" },
       jobId: "obras-sync-diario",
       attempts: 3,
       backoff: { type: "exponential", delay: 60_000 },
