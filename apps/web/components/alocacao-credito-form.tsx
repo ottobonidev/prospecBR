@@ -6,17 +6,26 @@ import { Input } from "@/components/ui/input";
 
 export function AlocacaoCreditoForm({
   usuarioId,
+  nome,
   cotaAlocadaInicial,
 }: {
   usuarioId: string;
+  nome: string;
   cotaAlocadaInicial: number;
 }) {
-  const [cota, setCota] = useState(cotaAlocadaInicial);
+  const [cota, setCota] = useState(String(cotaAlocadaInicial));
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
   const [erro, setErro] = useState(false);
 
+  const cotaNumero = Number(cota);
+  const cotaValida = cota.trim() !== "" && Number.isInteger(cotaNumero) && cotaNumero >= 0;
+
   async function salvar() {
+    if (!cotaValida) {
+      setErro(true);
+      return;
+    }
     setSalvando(true);
     setSalvo(false);
     setErro(false);
@@ -24,7 +33,7 @@ export function AlocacaoCreditoForm({
       const res = await fetch("/api/creditos/alocacao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usuarioId, cotaAlocada: cota }),
+        body: JSON.stringify({ usuarioId, cotaAlocada: cotaNumero }),
       });
       if (res.ok) {
         setSalvo(true);
@@ -43,11 +52,16 @@ export function AlocacaoCreditoForm({
       <Input
         type="number"
         min={0}
+        aria-label={`Cota alocada para ${nome}`}
         value={cota}
-        onChange={(e) => setCota(Number(e.target.value))}
+        onChange={(e) => {
+          setCota(e.target.value);
+          setSalvo(false);
+          setErro(false);
+        }}
         className="w-24"
       />
-      <Button type="button" size="sm" onClick={salvar} disabled={salvando}>
+      <Button type="button" size="sm" onClick={salvar} disabled={salvando || !cotaValida}>
         {salvando ? "Salvando..." : "Salvar cota"}
       </Button>
       {salvo && (
