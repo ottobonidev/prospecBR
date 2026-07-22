@@ -29,4 +29,10 @@ describe("calcularPrevisaoTermino", () => {
     const resultado = calcularPrevisaoTermino(inicio, 5000); // 5000/50 = 100 months -> clamp to 36
     expect(resultado).toEqual(new Date("2029-01-15T00:00:00.000Z"));
   });
+
+  it("rounds a non-integer in-range month count up on a .5 tie", () => {
+    const inicio = new Date("2026-01-15T00:00:00.000Z");
+    const resultado = calcularPrevisaoTermino(inicio, 325); // 325/50 = 6.5 months -> rounds to 7
+    expect(resultado).toEqual(new Date("2026-08-15T00:00:00.000Z"));
+  });
 });
