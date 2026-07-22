@@ -1,13 +1,24 @@
 import { startPingWorker } from "./queues/ping-queue";
+import { startObrasSyncWorker, agendarSincronizacaoDiaria } from "./queues/obras-sync-queue";
 
-const worker = startPingWorker();
-
-worker.on("completed", (job) => {
+const pingWorker = startPingWorker();
+pingWorker.on("completed", (job) => {
   console.log(`[ping-worker] job ${job.id} completed`);
 });
-
-worker.on("failed", (job, err) => {
+pingWorker.on("failed", (job, err) => {
   console.error(`[ping-worker] job ${job?.id} failed`, err);
 });
 
-console.log("[worker] conecta-obras worker running, listening on queue: ping");
+const obrasSyncWorker = startObrasSyncWorker();
+obrasSyncWorker.on("completed", (job, resultado) => {
+  console.log(`[obras-sync-worker] job ${job.id} completed`, resultado);
+});
+obrasSyncWorker.on("failed", (job, err) => {
+  console.error(`[obras-sync-worker] job ${job?.id} failed`, err);
+});
+
+agendarSincronizacaoDiaria().catch((err) => {
+  console.error("[obras-sync-worker] failed to schedule daily sync", err);
+});
+
+console.log("[worker] conecta-obras worker running, listening on queues: ping, obras-sync");
