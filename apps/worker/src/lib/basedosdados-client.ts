@@ -54,6 +54,8 @@ function paraDate(valor: unknown): Date {
 export class BaseDosDadosObrasClient implements ObrasFonteClient {
   private readonly bigquery: BigQuery;
 
+  static readonly LIMITE_PAGINA = 5000;
+
   constructor(bigquery: BigQuery = new BigQuery()) {
     this.bigquery = bigquery;
   }
@@ -83,7 +85,7 @@ export class BaseDosDadosObrasClient implements ObrasFonteClient {
       FROM \`${TABELA_CNO}\`
       WHERE data_atualizacao >= @cursor
       ORDER BY data_atualizacao ASC, cno ASC
-      LIMIT 5000
+      LIMIT ${BaseDosDadosObrasClient.LIMITE_PAGINA}
     `;
 
     const [rows] = await this.bigquery.query({

@@ -33,9 +33,15 @@ export function startObrasSyncWorker() {
       const fonte = new BaseDosDadosObrasClient();
       const resultado = await sincronizarObras(prisma, fonte, desde);
 
-      if (resultado.processadas > 0 && resultado.novoCursor.getTime() === desde.getTime()) {
+      // Página parcial sem avanço do cursor é quiescência normal (o `>=`
+      // re-busca as linhas de fronteira). Livelock real é página CHEIA sem
+      // avanço: mais linhas empatadas no timestamp do que cabe numa página.
+      if (
+        resultado.processadas >= BaseDosDadosObrasClient.LIMITE_PAGINA &&
+        resultado.novoCursor.getTime() === desde.getTime()
+      ) {
         console.warn(
-          `[obras-sync-worker] possivel livelock: ${resultado.processadas} linhas processadas sem avanco do cursor (${desde.toISOString()}) — mais de 5000 linhas com o mesmo timestamp?`
+          `[obras-sync-worker] possivel livelock: pagina cheia (${resultado.processadas} linhas) sem avanco do cursor (${desde.toISOString()}) — mais de ${BaseDosDadosObrasClient.LIMITE_PAGINA} linhas com o mesmo timestamp?`
         );
       }
 
