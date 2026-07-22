@@ -6,7 +6,7 @@ import { definirAlocacaoVendedor } from "@/lib/services/creditos";
 
 const schema = z.object({
   usuarioId: z.string().min(1),
-  cotaAlocada: z.coerce.number().int().min(0),
+  cotaAlocada: z.coerce.number().int().min(0).max(2147483647),
 });
 
 export async function POST(request: Request) {
@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     if (error instanceof ForbiddenError) {
       return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
     }
+    // 404, not 403: the target user id must not leak whether it exists in another tenant.
     if (error instanceof Error && error.message === "USUARIO_NAO_PERTENCE_A_CONTA") {
       return NextResponse.json({ error: "USUARIO_NAO_PERTENCE_A_CONTA" }, { status: 404 });
     }
