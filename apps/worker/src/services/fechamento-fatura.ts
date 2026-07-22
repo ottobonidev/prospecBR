@@ -2,6 +2,7 @@ import type { PrismaClient } from "@conecta-obras/db";
 
 export interface FecharFaturaMensalResultado {
   faturasGeradas: number;
+  contasSemPlano: string[];
 }
 
 export async function fecharFaturaMensal(
@@ -15,31 +16,52 @@ export async function fecharFaturaMensal(
   });
 
   let faturasGeradas = 0;
+  const contasSemPlano: string[] = [];
 
   for (const grupo of excedentesPorConta) {
     const quantidadeExcedente = grupo._count._all;
-    if (quantidadeExcedente === 0) continue;
 
     const plano = await prisma.creditPlan.findUnique({ where: { contaId: grupo.contaId } });
-    if (!plano) continue;
+    if (!plano) {
+      console.warn(
+        `[fechamento-fatura] conta ${grupo.contaId} sem CreditPlan em ${mesReferencia} — ${quantidadeExcedente} excedente(s) nao faturados`
+      );
+      contasSemPlano.push(grupo.contaId);
+      continue;
+    }
 
-    await prisma.faturaMensal.upsert({
+    const valorTotalCentavos = quantidadeExcedente * plano.precoVendaLeadsCentavos;
+
+    const existente = await prisma.faturaMensal.findUnique({
       where: { contaId_mesReferencia: { contaId: grupo.contaId, mesReferencia } },
-      create: {
-        contaId: grupo.contaId,
-        mesReferencia,
-        quantidadeExcedente,
-        valorTotalCentavos: quantidadeExcedente * plano.precoVendaLeadsCentavos,
-        status: "PENDENTE",
-      },
-      update: {
-        quantidadeExcedente,
-        valorTotalCentavos: quantidadeExcedente * plano.precoVendaLeadsCentavos,
-      },
     });
+
+    if (existente?.status === "PAGA") {
+      console.warn(
+        `[fechamento-fatura] fatura ja PAGA para conta ${grupo.contaId} em ${mesReferencia} — recomputo ignorado (quantidade atual ${quantidadeExcedente} difere? valor pago preservado)`
+      );
+      continue;
+    }
+
+    if (!existente) {
+      await prisma.faturaMensal.create({
+        data: {
+          contaId: grupo.contaId,
+          mesReferencia,
+          quantidadeExcedente,
+          valorTotalCentavos,
+          status: "PENDENTE",
+        },
+      });
+    } else {
+      await prisma.faturaMensal.update({
+        where: { contaId_mesReferencia: { contaId: grupo.contaId, mesReferencia } },
+        data: { quantidadeExcedente, valorTotalCentavos },
+      });
+    }
 
     faturasGeradas += 1;
   }
 
-  return { faturasGeradas };
+  return { faturasGeradas, contasSemPlano };
 }
