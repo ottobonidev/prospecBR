@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { GET, __resetCacheParaTeste } from "../municipios/route";
+import { GET } from "../municipios/route";
+import { __resetCacheParaTeste } from "@/lib/ibgeMunicipiosCache";
 
 describe("GET /api/ibge/municipios", () => {
   beforeEach(() => {

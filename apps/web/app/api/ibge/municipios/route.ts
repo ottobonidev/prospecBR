@@ -1,17 +1,7 @@
 import { NextResponse } from "next/server";
+import { obterCache, definirCache } from "@/lib/ibgeMunicipiosCache";
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-
-interface EntradaCache {
-  municipios: { nome: string }[];
-  expiraEm: number;
-}
-
-let cachePorUf = new Map<string, EntradaCache>();
-
-export function __resetCacheParaTeste() {
-  cachePorUf = new Map();
-}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -22,7 +12,7 @@ export async function GET(request: Request) {
   }
 
   const agora = Date.now();
-  const emCache = cachePorUf.get(uf);
+  const emCache = obterCache(uf);
   if (emCache && emCache.expiraEm > agora) {
     return NextResponse.json(emCache.municipios);
   }
@@ -35,7 +25,7 @@ export async function GET(request: Request) {
   const dados: { nome: string }[] = await res.json();
   const municipios = dados.map((m) => ({ nome: m.nome }));
 
-  cachePorUf.set(uf, { municipios, expiraEm: agora + CACHE_TTL_MS });
+  definirCache(uf, { municipios, expiraEm: agora + CACHE_TTL_MS });
 
   return NextResponse.json(municipios);
 }
