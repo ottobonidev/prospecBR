@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { obrasParaCsv } from "@/lib/csv";
 import { CidadeCombobox } from "@/components/cidade-combobox";
 import { FiltrosAvancadosModal, type FiltrosAvancados } from "@/components/filtros-avancados-modal";
+import { AcompanhamentoModal, type AcompanhamentoValor } from "@/components/acompanhamento-modal";
+import { AgendamentoModal, type AgendamentoValor } from "@/components/agendamento-modal";
 
 interface Obra {
   id: string;
@@ -55,6 +57,12 @@ export function LeadsSearchForm({ restanteInicial }: { restanteInicial: number }
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [excedente, setExcedente] = useState(false);
+  const [acompanharObraId, setAcompanharObraId] = useState<string | null>(null);
+  const [acompInicial, setAcompInicial] = useState<AcompanhamentoValor | null>(null);
+  const [agendarObraId, setAgendarObraId] = useState<string | null>(null);
+  const [statusPorObra, setStatusPorObra] = useState<
+    Record<string, { status: string; temperatura: string | null }>
+  >({});
 
   function montarParametros(paginaAlvo: number) {
     const params = new URLSearchParams();
@@ -127,6 +135,60 @@ export function LeadsSearchForm({ restanteInicial }: { restanteInicial: number }
     }
   }
 
+  async function abrirAcompanhar(obraId: string) {
+    setAcompInicial(null);
+    setAcompanharObraId(obraId);
+    try {
+      const res = await fetch(`/api/leads/acompanhar?obraId=${obraId}`);
+      if (res.ok) {
+        const dados = await res.json();
+        if (dados) {
+          setAcompInicial({
+            status: dados.status,
+            temperatura: dados.temperatura ?? null,
+            probabilidade: dados.probabilidade ?? null,
+            anotacoes: dados.anotacoes ?? null,
+          });
+        }
+      }
+    } catch {
+      // mantém o modal com valores padrão se a busca falhar
+    }
+  }
+
+  async function salvarAcompanhamento(valor: AcompanhamentoValor) {
+    const obraId = acompanharObraId;
+    if (!obraId) return;
+    const res = await fetch("/api/leads/acompanhar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ obraId, ...valor }),
+    });
+    if (res.ok) {
+      setStatusPorObra((atual) => ({
+        ...atual,
+        [obraId]: { status: valor.status, temperatura: valor.temperatura },
+      }));
+    }
+    setAcompanharObraId(null);
+  }
+
+  async function criarAgendamento(valor: AgendamentoValor) {
+    const obraId = agendarObraId;
+    if (!obraId) return;
+    await fetch("/api/leads/agendar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        obraId,
+        dataHora: new Date(`${valor.data}T${valor.hora}`).toISOString(),
+        titulo: valor.titulo,
+        descricao: valor.descricao || null,
+      }),
+    });
+    setAgendarObraId(null);
+  }
+
   function exportarCsv() {
     const csv = obrasParaCsv(
       obras.map((obra) => ({
@@ -193,6 +255,19 @@ export function LeadsSearchForm({ restanteInicial }: { restanteInicial: number }
         onFechar={() => setModalAberto(false)}
       />
 
+      <AcompanhamentoModal
+        aberto={acompanharObraId !== null}
+        inicial={acompInicial}
+        onSalvar={salvarAcompanhamento}
+        onFechar={() => setAcompanharObraId(null)}
+      />
+
+      <AgendamentoModal
+        aberto={agendarObraId !== null}
+        onCriar={criarAgendamento}
+        onFechar={() => setAgendarObraId(null)}
+      />
+
       <p className="text-sm text-slate-600">
         Buscas grátis restantes este mês: {restante}
         {excedente && (
@@ -222,23 +297,13 @@ export function LeadsSearchForm({ restanteInicial }: { restanteInicial: number }
                     {obra.cno} | {obra.uf} - {obra.cidade}
                   </p>
                   <div className="flex gap-2 text-slate-400">
-                    <button
-                      type="button"
-                      title="Disponível no CRM"
-                      disabled
-                      className="cursor-not-allowed"
-                    >
+                    <button type="button" title="Agendar" onClick={() => setAgendarObraId(obra.id)}>
                       📅
                     </button>
                     <button type="button" title="Favoritar" onClick={() => favoritar(obra.id)}>
                       ♡
                     </button>
-                    <button
-                      type="button"
-                      title="Disponível no CRM"
-                      disabled
-                      className="cursor-not-allowed"
-                    >
+                    <button type="button" title="Acompanhar" onClick={() => abrirAcompanhar(obra.id)}>
                       🏷
                     </button>
                     <button type="button" title="Ocultar" onClick={() => ocultar(obra.id)}>
@@ -246,6 +311,19 @@ export function LeadsSearchForm({ restanteInicial }: { restanteInicial: number }
                     </button>
                   </div>
                 </div>
+
+                {statusPorObra[obra.id] && (
+                  <p className="mb-2 text-xs">
+                    <span className="rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+                      {statusPorObra[obra.id].status.replaceAll("_", " ")}
+                    </span>
+                    {statusPorObra[obra.id].temperatura && (
+                      <span className="ml-2 text-slate-500">
+                        {statusPorObra[obra.id].temperatura!.replaceAll("_", " ")}
+                      </span>
+                    )}
+                  </p>
+                )}
 
                 <p className="mb-2 text-slate-700">
                   <strong>Proprietário:</strong> {obra.razaoSocial}
