@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Calendar, Heart, Tag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,40 +10,9 @@ import { CidadeCombobox } from "@/components/cidade-combobox";
 import { FiltrosAvancadosModal, type FiltrosAvancados } from "@/components/filtros-avancados-modal";
 import { AcompanhamentoModal, type AcompanhamentoValor } from "@/components/acompanhamento-modal";
 import { AgendamentoModal, type AgendamentoValor } from "@/components/agendamento-modal";
-
-interface Obra {
-  id: string;
-  cno: string;
-  razaoSocial: string;
-  responsavelNome: string | null;
-  uf: string;
-  cidade: string;
-  bairro: string | null;
-  status: string;
-  subcategoria: string | null;
-  tipoObra: string | null;
-  tipoArea: string | null;
-  destinacao: string | null;
-  areaConstruida: number | null;
-  areaTotal: number | null;
-  valorInvestimentoCentavos: number | null;
-  dataInicio: string | null;
-  previsaoTermino: string | null;
-  enderecoCompleto: string | null;
-  complemento: string | null;
-}
+import { ObraCard, type ObraResumo } from "@/components/obra-card";
 
 const PAGE_SIZE = 10;
-
-function formatarMoeda(centavos: number | null): string {
-  if (centavos === null) return "-";
-  return (centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatarData(iso: string | null): string {
-  if (!iso) return "-";
-  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" });
-}
 
 export function LeadsSearchForm({ restanteInicial }: { restanteInicial: number }) {
   const [uf, setUf] = useState("");
@@ -51,7 +21,7 @@ export function LeadsSearchForm({ restanteInicial }: { restanteInicial: number }
   const [filtros, setFiltros] = useState<FiltrosAvancados>({});
   const [modalAberto, setModalAberto] = useState(false);
   const [pagina, setPagina] = useState(1);
-  const [obras, setObras] = useState<Obra[]>([]);
+  const [obras, setObras] = useState<ObraResumo[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [restante, setRestante] = useState(restanteInicial);
   const [carregando, setCarregando] = useState(false);
@@ -291,89 +261,53 @@ export function LeadsSearchForm({ restanteInicial }: { restanteInicial: number }
 
           <ul className="space-y-3">
             {obras.map((obra) => (
-              <li key={obra.id} className="rounded-lg border border-slate-200 bg-white p-4 text-sm">
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="font-semibold text-slate-900">
-                    {obra.cno} | {obra.uf} - {obra.cidade}
-                  </p>
-                  <div className="flex gap-2 text-slate-400">
-                    <button type="button" title="Agendar" onClick={() => setAgendarObraId(obra.id)}>
-                      📅
-                    </button>
-                    <button type="button" title="Favoritar" onClick={() => favoritar(obra.id)}>
-                      ♡
-                    </button>
-                    <button type="button" title="Acompanhar" onClick={() => abrirAcompanhar(obra.id)}>
-                      🏷
-                    </button>
-                    <button type="button" title="Ocultar" onClick={() => ocultar(obra.id)}>
-                      🗑
-                    </button>
-                  </div>
-                </div>
-
-                {statusPorObra[obra.id] && (
-                  <p className="mb-2 text-xs">
-                    <span className="rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+              <li key={obra.id}>
+                <ObraCard obra={obra}>
+                  {statusPorObra[obra.id] && (
+                    <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
                       {statusPorObra[obra.id].status.replaceAll("_", " ")}
-                    </span>
-                    {statusPorObra[obra.id].temperatura && (
-                      <span className="ml-2 text-slate-500">
-                        {statusPorObra[obra.id].temperatura!.replaceAll("_", " ")}
-                      </span>
-                    )}
-                  </p>
-                )}
-
-                <p className="mb-2 text-slate-700">
-                  <strong>Proprietário:</strong> {obra.razaoSocial}
-                  {obra.responsavelNome && obra.responsavelNome !== obra.razaoSocial && (
-                    <span className="ml-4">
-                      <strong>Responsável:</strong> {obra.responsavelNome}
+                      {statusPorObra[obra.id].temperatura && (
+                        <span className="ml-1 font-normal text-slate-500">
+                          {statusPorObra[obra.id].temperatura!.replaceAll("_", " ")}
+                        </span>
+                      )}
                     </span>
                   )}
-                </p>
-
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-slate-600 sm:grid-cols-4">
-                  <span>
-                    <strong>Subcategoria:</strong> {obra.subcategoria ?? "-"}
+                  <span className="flex gap-1 text-slate-500">
+                    <button
+                      type="button"
+                      title="Agendar"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded border border-slate-200 hover:bg-slate-50"
+                      onClick={() => setAgendarObraId(obra.id)}
+                    >
+                      <Calendar className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Favoritar"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded border border-slate-200 hover:bg-slate-50"
+                      onClick={() => favoritar(obra.id)}
+                    >
+                      <Heart className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Acompanhar"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded border border-slate-200 hover:bg-slate-50"
+                      onClick={() => abrirAcompanhar(obra.id)}
+                    >
+                      <Tag className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Ocultar"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded border border-slate-200 hover:bg-slate-50"
+                      onClick={() => ocultar(obra.id)}
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </span>
-                  <span>
-                    <strong>Tipo:</strong> {obra.tipoObra ?? "-"}
-                  </span>
-                  <span>
-                    <strong>Situação:</strong> {obra.status}
-                  </span>
-                  <span>
-                    <strong>Tipo de área:</strong> {obra.tipoArea ?? "-"}
-                  </span>
-                  <span>
-                    <strong>Valor Investimento:</strong>{" "}
-                    {formatarMoeda(obra.valorInvestimentoCentavos)}
-                  </span>
-                  <span>
-                    <strong>Metragem:</strong> {obra.areaConstruida ?? "-"} m2
-                  </span>
-                  <span>
-                    <strong>Área total:</strong> {obra.areaTotal ?? obra.areaConstruida ?? "-"} m2
-                  </span>
-                  <span>
-                    <strong>Destinação:</strong> {obra.destinacao ?? "-"}
-                  </span>
-                  <span>
-                    <strong>Data de início:</strong> {formatarData(obra.dataInicio)}
-                  </span>
-                  <span>
-                    <strong>Previsão de término:</strong> {formatarData(obra.previsaoTermino)}
-                  </span>
-                </div>
-
-                {obra.enderecoCompleto && (
-                  <p className="mt-2 text-slate-500">
-                    <strong>Endereço:</strong> {obra.enderecoCompleto}
-                    {obra.complemento && <span> — Complemento: {obra.complemento}</span>}
-                  </p>
-                )}
+                </ObraCard>
               </li>
             ))}
           </ul>

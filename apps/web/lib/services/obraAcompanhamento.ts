@@ -45,3 +45,14 @@ export async function buscarAcompanhamento(
     where: { usuarioId_obraId: { usuarioId: input.usuarioId, obraId: input.obraId } },
   });
 }
+
+export async function listarAcompanhamentos(
+  prisma: PrismaClient,
+  input: { usuarioId: string }
+) {
+  return prisma.acompanhamento.findMany({
+    where: { usuarioId: input.usuarioId },
+    include: { obra: true },
+    orderBy: { criadoEm: "desc" },
+  });
+}

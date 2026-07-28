@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { criarAgendamento } from "../services/obraAgendamento";
+import { criarAgendamento, listarAgendamentos } from "../services/obraAgendamento";
 
 describe("criarAgendamento", () => {
   it("cria um agendamento com o payload completo", async () => {
@@ -52,5 +52,21 @@ describe("criarAgendamento", () => {
         descricao: null,
       },
     });
+  });
+});
+
+describe("listarAgendamentos", () => {
+  it("lista agendamentos do usuario com obra e ordem por data decrescente", async () => {
+    const findMany = vi.fn().mockResolvedValue([{ id: "agend_1", obra: { id: "obra_1" } }]);
+    const prisma = { agendamento: { findMany } } as any;
+
+    const resultado = await listarAgendamentos(prisma, { usuarioId: "user_1" });
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: { usuarioId: "user_1" },
+      include: { obra: true },
+      orderBy: { dataHora: "desc" },
+    });
+    expect(resultado).toEqual([{ id: "agend_1", obra: { id: "obra_1" } }]);
   });
 });
