@@ -10,6 +10,16 @@ a interface `/crm` que consolida esses quatro conjuntos numa visão por abas.
 Base: `feature/fase1-fundacao` (já com Fases 2.5 e 3a mergeadas). CRM real documentado em
 `docs/superpowers/specs/2026-07-22-conectaobras-sistema-real.md` §4.
 
+## Reposicionamento do produto
+
+A plataforma final nao deve ser tratada como clone literal nem usar necessariamente o nome Conecta
+Obras. A direcao atual esta documentada em
+`docs/superpowers/specs/2026-07-28-visao-produto-prospeccao-obras.md`: prospeccao B2B para obras,
+enriquecimento pago de contatos por CNPJ, CRM e robos de disparo por vendedor.
+
+Dentro desse roadmap, esta Fase 3b continua sendo a base operacional que organiza os leads antes
+das fases de enriquecimento e automacao.
+
 ## Escopo fechado com o usuário
 
 - Cada aba mostra os dados **do usuário logado** (vendedor vê o seu; lojista vê o seu). O filtro
@@ -39,6 +49,10 @@ Base: `feature/fase1-fundacao` (já com Fases 2.5 e 3a mergeadas). CRM real docu
 
 - Relatórios e Indicadores por vendedor — Fase 3c.
 - Filtro por vendedor / visão do lojista da equipe — Fase 3c.
+- Enriquecimento pago de contatos por CNPJ/CPF, saldo de consultas e excedentes — fase posterior
+  dedicada a Consulta Plus e ledger de custos.
+- Robos de disparo, configuracao de agente e WhatsApp oficial/nao oficial — fase posterior de
+  SDR IA.
 - Seletor de CRM (Obras CNO / CAU / Empresas) — só existe CNO.
 - Kanban com arrastar-e-soltar — a lista com filtro por status basta.
 - Ações de edição a partir do CRM (editar acompanhamento/agendamento na própria tela) — o card

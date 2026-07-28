@@ -266,3 +266,24 @@ Bloqueado para o perfil Lojista (cadeado) — provavelmente área do administrad
 - Cidade/UF via **API IBGE** em vez de lista fixa.
 - Deduplicação de obras: o real exibe registros claramente duplicados (mesmo proprietário,
   mesmo endereço, mesma metragem — ex. COCAMAR e MARCELO BISPO aparecem duas vezes).
+
+---
+
+## 12. Reposicionamento apos conversa de produto
+
+Este documento continua sendo a referencia de comportamento do sistema observado, mas nao define
+a marca nem limita a ambicao do produto final. A direcao atual esta documentada em
+`docs/superpowers/specs/2026-07-28-visao-produto-prospeccao-obras.md`.
+
+Resumo da direcao:
+
+- Produto proprio de prospeccao para construcao civil, nao clone literal.
+- Nome definitivo ainda em aberto; possibilidades de trabalho incluem Prospect Obras e Fluxo
+  Obras.
+- Leads/obras continuam como origem do funil comercial.
+- Enriquecimento pago por CNPJ/CPF deve revelar contatos de socios/responsaveis e consumir
+  creditos.
+- Excedentes de consultas devem ser cobrados junto da mensalidade.
+- Robos de disparo por vendedor/login entram como modulo separado, com suporte a API oficial e
+  nao oficial de WhatsApp.
+- O cliente configura o agente, tom, empresa, produtos e instrucoes dentro do sistema.
