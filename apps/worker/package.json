@@ -1,0 +1,23 @@
+{
+  "name": "@conecta-obras/worker",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "start": "node --env-file=.env dist/index.js",
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@conecta-obras/db": "workspace:*",
+    "@google-cloud/bigquery": "^7.9.0",
+    "bullmq": "^5.13.0",
+    "ioredis": "^5.4.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^22.7.0",
+    "vitest": "^2.1.0"
+  }
+}

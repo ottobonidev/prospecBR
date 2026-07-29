@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Conta {
+  id          String            @id @default(cuid())
+  nomeEmpresa String
+  cnpj        String            @unique
+  plano       String            @default("trial")
+  criadoEm    DateTime          @default(now())
+  usuarios    Usuario[]
+  convites    ConviteVendedor[]
+
+  creditPlan          CreditPlan?
+  creditAllocations   CreditAllocation[]
+  creditLedgerEntries CreditLedgerEntry[]
+  faturas             FaturaMensal[]
+  acompanhamentos     Acompanhamento[]
+  agendamentos        Agendamento[]
+}
+
+enum Papel {
+  LOJISTA
+  VENDEDOR
+}
+
+enum StatusUsuario {
+  ATIVO
+  INATIVO
+}
+
+model Usuario {
+  id        String        @id @default(cuid())
+  contaId   String
+  conta     Conta         @relation(fields: [contaId], references: [id])
+  nome      String
+  email     String        @unique
+  senhaHash String
+  papel     Papel
+  status    StatusUsuario @default(ATIVO)
+  criadoEm  DateTime      @default(now())
+
+  creditAllocations   CreditAllocation[]
+  creditLedgerEntries CreditLedgerEntry[]
+  obraFavoritos       ObraFavorito[]
+  obraOcultas         ObraOculta[]
+  acompanhamentos     Acompanhamento[]
+  agendamentos        Agendamento[]
+
+  @@index([contaId])
+}
+
+model ConviteVendedor {
+  id       String    @id @default(cuid())
+  contaId  String
+  conta    Conta     @relation(fields: [contaId], references: [id])
+  email    String
+  token    String    @unique
+  aceitoEm DateTime?
+  expiraEm DateTime
+  criadoEm DateTime  @default(now())
+
+  @@index([contaId])
+}
+
+enum StatusObra {
+  ATIVA
+  ENCERRADA
+  NULA
+  SUSPENSA
+  PARALISADA
+}
+
+enum CategoriaObra {
+  OBRA_CONSTRUCAO_CIVIL
+  OBRA_ELETRICA_INFRA
+}
+
+enum SubcategoriaObra {
+  OBRA_NOVA
+  ACRESCIMO
+  REFORMA
+  DEMOLICAO
+  EXISTENTE
+}
+
+enum TipoObra {
+  ALVENARIA
+  MISTA
+  MADEIRA
+}
+
+enum TipoArea {
+  PRINCIPAL
+  COMPLEMENTAR
+}
+
+enum Zona {
+  RURAL
+  URBANA
+}
+
+enum DestinacaoObra {
+  RESIDENCIAL_UNIFAMILIAR
+  RESIDENCIAL_MULTIFAMILIAR
+  COMERCIAL_SALAS_LOJAS
+  EDIFICIO_GARAGENS
+  GALPAO_INDUSTRIAL
+  CASA_POPULAR
+  CONJUNTO_HABITACIONAL_POPULAR
+}
+
+enum TipoResponsavel {
+  PESSOA_FISICA
+  PESSOA_JURIDICA
+}
+
+enum StatusAcompanhamento {
+  SELECAO
+  CONTATO
+  NAO_RESPONDEU
+  RESPONDEU
+  ORCAMENTO
+  A_FECHAR
+  FECHADO
+  PERDIDO
+  JA_COMPROU
+  NAO_QUER_RECEBER_MENSAGEM
+  OUTROS
+}
+
+enum TemperaturaLead {
+  MUITO_QUENTE
+  QUENTE
+  MORNA
+  FRIA
+}
+
+model Obra {
+  id              String     @id @default(cuid())
+  cno             String     @unique
+  cnpjResponsavel String
+  razaoSocial     String
+  uf              String
+  cidade          String
+  bairro          String?
+  cep             String?
+  status          StatusObra
+  dataInicio      DateTime?
+  natureza        String?
+  areaConstruida  Float?
+  criadoEm        DateTime   @default(now())
+  atualizadoEm    DateTime   @updatedAt
+
+  responsavelNome           String?
+  categoria                 CategoriaObra     @default(OBRA_CONSTRUCAO_CIVIL)
+  subcategoria              SubcategoriaObra?
+  tipoObra                  TipoObra?
+  tipoArea                  TipoArea?
+  zona                      Zona?
+  destinacao                DestinacaoObra?
+  tipoResponsavel           TipoResponsavel?
+  areaTotal                 Float?
+  enderecoCompleto          String?
+  complemento               String?
+  valorInvestimentoCentavos Int?
+  previsaoTermino           DateTime?
+
+  favoritos       ObraFavorito[]
+  ocultas         ObraOculta[]
+  acompanhamentos Acompanhamento[]
+  agendamentos    Agendamento[]
+
+  @@index([uf, cidade, status])
+  @@index([subcategoria])
+  @@index([tipoObra])
+  @@index([zona])
+  @@index([destinacao])
+  @@index([tipoResponsavel])
+}
+
+model ObraFavorito {
+  id        String   @id @default(cuid())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  obraId    String
+  obra      Obra     @relation(fields: [obraId], references: [id])
+  criadoEm  DateTime @default(now())
+
+  @@unique([usuarioId, obraId])
+}
+
+model ObraOculta {
+  id        String   @id @default(cuid())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  obraId    String
+  obra      Obra     @relation(fields: [obraId], references: [id])
+  criadoEm  DateTime @default(now())
+
+  @@unique([usuarioId, obraId])
+}
+
+model Acompanhamento {
+  id            String               @id @default(cuid())
+  contaId       String
+  conta         Conta                @relation(fields: [contaId], references: [id])
+  usuarioId     String
+  usuario       Usuario              @relation(fields: [usuarioId], references: [id])
+  obraId        String
+  obra          Obra                 @relation(fields: [obraId], references: [id])
+  status        StatusAcompanhamento
+  temperatura   TemperaturaLead?
+  probabilidade Int?
+  anotacoes     String?
+  criadoEm      DateTime             @default(now())
+  atualizadoEm  DateTime             @updatedAt
+
+  @@unique([usuarioId, obraId])
+  @@index([contaId, status])
+}
+
+model Agendamento {
+  id        String   @id @default(cuid())
+  contaId   String
+  conta     Conta    @relation(fields: [contaId], references: [id])
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  obraId    String
+  obra      Obra     @relation(fields: [obraId], references: [id])
+  dataHora  DateTime
+  titulo    String
+  descricao String?
+  criadoEm  DateTime @default(now())
+
+  @@index([usuarioId, dataHora])
+  @@index([contaId])
+}
+
+model CreditPlan {
+  id                      String   @id @default(cuid())
+  contaId                 String   @unique
+  conta                   Conta    @relation(fields: [contaId], references: [id])
+  cotaMensalGratis        Int
+  precoCustoLeadsCentavos Int
+  precoVendaLeadsCentavos Int
+  criadoEm                DateTime @default(now())
+}
+
+model CreditAllocation {
+  id           String   @id @default(cuid())
+  contaId      String
+  conta        Conta    @relation(fields: [contaId], references: [id])
+  usuarioId    String
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id])
+  cotaAlocada  Int
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([contaId, usuarioId])
+}
+
+enum TipoConsumoCredito {
+  LEADS_SEARCH
+}
+
+model CreditLedgerEntry {
+  id            String             @id @default(cuid())
+  contaId       String
+  conta         Conta              @relation(fields: [contaId], references: [id])
+  usuarioId     String
+  usuario       Usuario            @relation(fields: [usuarioId], references: [id])
+  tipo          TipoConsumoCredito
+  excedente     Boolean
+  mesReferencia String
+  criadoEm      DateTime           @default(now())
+
+  @@index([contaId, mesReferencia])
+}
+
+enum StatusFatura {
+  PENDENTE
+  PAGA
+}
+
+model FaturaMensal {
+  id                  String       @id @default(cuid())
+  contaId             String
+  conta               Conta        @relation(fields: [contaId], references: [id])
+  mesReferencia       String
+  quantidadeExcedente Int
+  valorTotalCentavos  Int
+  status              StatusFatura @default(PENDENTE)
+  criadoEm            DateTime     @default(now())
+
+  @@unique([contaId, mesReferencia])
+}
+
+model ObrasSyncCursor {
+  id                  String   @id @default("obras_sync_cursor")
+  ultimaSincronizacao DateTime
+  atualizadoEm        DateTime @updatedAt
+}
