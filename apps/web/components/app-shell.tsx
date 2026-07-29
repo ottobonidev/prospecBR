@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", disabled: false },
   { label: "Leads", href: "/leads", disabled: false },
-  { label: "CRM", href: "/crm", disabled: true },
+  { label: "CRM", href: "/crm", disabled: false },
   { label: "SDR IA", href: "/sdr-ia", disabled: true },
   { label: "Consulta Plus", href: "/consulta-plus", disabled: true },
   { label: "Busca Avançada", href: "/busca-avancada", disabled: true },

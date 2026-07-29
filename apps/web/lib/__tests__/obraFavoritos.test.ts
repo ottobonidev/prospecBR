@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
-import { alternarFavorito, ocultarObra } from "../services/obraFavoritos";
+import {
+  alternarFavorito,
+  listarFavoritos,
+  listarOcultas,
+  ocultarObra,
+} from "../services/obraFavoritos";
 
 describe("alternarFavorito", () => {
   it("creates a favorito when none exists", async () => {
@@ -49,5 +54,37 @@ describe("ocultarObra", () => {
       create: { usuarioId: "user_1", obraId: "obra_1" },
       update: {},
     });
+  });
+});
+
+describe("listarFavoritos", () => {
+  it("lista favoritos do usuario com obra e ordem decrescente", async () => {
+    const findMany = vi.fn().mockResolvedValue([{ id: "fav_1", obra: { id: "obra_1" } }]);
+    const prisma = { obraFavorito: { findMany } } as any;
+
+    const resultado = await listarFavoritos(prisma, { usuarioId: "user_1" });
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: { usuarioId: "user_1" },
+      include: { obra: true },
+      orderBy: { criadoEm: "desc" },
+    });
+    expect(resultado).toEqual([{ id: "fav_1", obra: { id: "obra_1" } }]);
+  });
+});
+
+describe("listarOcultas", () => {
+  it("lista obras ocultas do usuario com obra e ordem decrescente", async () => {
+    const findMany = vi.fn().mockResolvedValue([{ id: "oculta_1", obra: { id: "obra_1" } }]);
+    const prisma = { obraOculta: { findMany } } as any;
+
+    const resultado = await listarOcultas(prisma, { usuarioId: "user_1" });
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: { usuarioId: "user_1" },
+      include: { obra: true },
+      orderBy: { criadoEm: "desc" },
+    });
+    expect(resultado).toEqual([{ id: "oculta_1", obra: { id: "obra_1" } }]);
   });
 });

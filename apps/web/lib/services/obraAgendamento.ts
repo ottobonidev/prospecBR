@@ -24,3 +24,14 @@ export async function criarAgendamento(
     },
   });
 }
+
+export async function listarAgendamentos(
+  prisma: PrismaClient,
+  input: { usuarioId: string }
+) {
+  return prisma.agendamento.findMany({
+    where: { usuarioId: input.usuarioId },
+    include: { obra: true },
+    orderBy: { dataHora: "desc" },
+  });
+}

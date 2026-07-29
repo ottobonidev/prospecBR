@@ -40,3 +40,22 @@ export async function ocultarObra(prisma: PrismaClient, input: OcultarObraInput)
     update: {},
   });
 }
+
+export async function listarFavoritos(
+  prisma: PrismaClient,
+  input: { usuarioId: string }
+) {
+  return prisma.obraFavorito.findMany({
+    where: { usuarioId: input.usuarioId },
+    include: { obra: true },
+    orderBy: { criadoEm: "desc" },
+  });
+}
+
+export async function listarOcultas(prisma: PrismaClient, input: { usuarioId: string }) {
+  return prisma.obraOculta.findMany({
+    where: { usuarioId: input.usuarioId },
+    include: { obra: true },
+    orderBy: { criadoEm: "desc" },
+  });
+}

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
   salvarAcompanhamento,
   buscarAcompanhamento,
+  listarAcompanhamentos,
 } from "../services/obraAcompanhamento";
 
 describe("salvarAcompanhamento", () => {
@@ -98,5 +99,21 @@ describe("buscarAcompanhamento", () => {
     });
 
     expect(resultado).toBeNull();
+  });
+});
+
+describe("listarAcompanhamentos", () => {
+  it("lista acompanhamentos do usuario com obra e ordem decrescente", async () => {
+    const findMany = vi.fn().mockResolvedValue([{ id: "acomp_1", obra: { id: "obra_1" } }]);
+    const prisma = { acompanhamento: { findMany } } as any;
+
+    const resultado = await listarAcompanhamentos(prisma, { usuarioId: "user_1" });
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: { usuarioId: "user_1" },
+      include: { obra: true },
+      orderBy: { criadoEm: "desc" },
+    });
+    expect(resultado).toEqual([{ id: "acomp_1", obra: { id: "obra_1" } }]);
   });
 });
